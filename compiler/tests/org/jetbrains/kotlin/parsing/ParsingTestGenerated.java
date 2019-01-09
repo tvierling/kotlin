@@ -2163,6 +2163,11 @@ public class ParsingTestGenerated extends AbstractParsingTest {
                 runTest("compiler/testData/psi/recovery/SameLineStatementRecovery.kt");
             }
 
+            @TestMetadata("UnfinishedExtension.kt")
+            public void testUnfinishedExtension() throws Exception {
+                runTest("compiler/testData/psi/recovery/UnfinishedExtension.kt");
+            }
+
             @TestMetadata("ValNoName.kt")
             public void testValNoName() throws Exception {
                 runTest("compiler/testData/psi/recovery/ValNoName.kt");
