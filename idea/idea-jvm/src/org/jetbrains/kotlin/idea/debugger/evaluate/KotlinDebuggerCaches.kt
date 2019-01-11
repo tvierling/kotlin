@@ -24,6 +24,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.libraries.LibraryUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
@@ -168,10 +169,11 @@ class KotlinDebuggerCaches(project: Project) {
 
         fun getOrReadDebugInfoFromBytecode(
                 project: Project,
+                searchScope: GlobalSearchScope,
                 jvmName: JvmClassName,
                 file: VirtualFile): BytecodeDebugInfo? {
             val cache = getInstance(project)
-            return cache.debugInfoCache.value[BinaryCacheKey(project, jvmName, file)]
+            return cache.debugInfoCache.value[BinaryCacheKey(project, searchScope, jvmName, file)]
         }
 
         private fun getElementToCreateTypeMapperForLibraryFile(element: PsiElement?) =

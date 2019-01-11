@@ -64,9 +64,10 @@ fun isInlineFunctionLineNumber(file: VirtualFile, lineNumber: Int, project: Proj
 }
 
 fun readBytecodeInfo(project: Project,
+                     searchScope: GlobalSearchScope,
                      jvmName: JvmClassName,
                      file: VirtualFile): BytecodeDebugInfo? {
-    return KotlinDebuggerCaches.getOrReadDebugInfoFromBytecode(project, jvmName, file)
+    return KotlinDebuggerCaches.getOrReadDebugInfoFromBytecode(project, searchScope, jvmName, file)
 }
 
 fun ktLocationInfo(location: Location, isDexDebug: Boolean, project: Project,
@@ -110,7 +111,7 @@ fun getLastLineNumberForLocation(location: Location, project: Project, searchSco
 
 fun createWeakBytecodeDebugInfoStorage(): ConcurrentMap<BinaryCacheKey, BytecodeDebugInfo?> {
     return ConcurrentFactoryMap.createWeakMap<BinaryCacheKey, BytecodeDebugInfo?> { key ->
-        val bytes = readClassFileImpl(key.project, key.jvmName, key.file) ?: return@createWeakMap null
+        val bytes = readClassFileImpl(key.project, key.searchScope, key.jvmName, key.file) ?: return@createWeakMap null
 
         val smapData = readDebugInfo(bytes)
         val lineNumberMapping = readLineNumberTableMapping(bytes)
@@ -123,9 +124,10 @@ class BytecodeDebugInfo(val smapData: SmapData?, val lineTableMapping: Map<Bytec
 
 data class BytecodeMethodKey(val methodName: String, val signature: String)
 
-data class BinaryCacheKey(val project: Project, val jvmName: JvmClassName, val file: VirtualFile)
+data class BinaryCacheKey(val project: Project, val searchScope: GlobalSearchScope, val jvmName: JvmClassName, val file: VirtualFile)
 
 private fun readClassFileImpl(project: Project,
+                              searchScope: GlobalSearchScope,
                               jvmName: JvmClassName,
                               file: VirtualFile): ByteArray? {
     val fqNameWithInners = jvmName.fqNameForClassNameWithoutDollars.tail(jvmName.packageFqName)
@@ -135,8 +137,7 @@ private fun readClassFileImpl(project: Project,
 
         val classId = ClassId(jvmName.packageFqName, Name.identifier(fqNameWithInners.asString()))
 
-        // TODO use debugger search scope
-        val fileFinder = VirtualFileFinderFactory.getInstance(project).create(GlobalSearchScope.allScope(project))
+        val fileFinder = VirtualFileFinderFactory.getInstance(project).create(searchScope)
         val classFile = fileFinder.findVirtualFileWithHeader(classId) ?: return null
         return classFile.contentsToByteArray(false)
     }
@@ -251,7 +252,7 @@ private fun findAndReadClassFile(
     val virtualFile = file.virtualFile ?: return null
     if (!fileFilter(virtualFile)) return null
 
-    return readBytecodeInfo(project, jvmClassName, virtualFile)
+    return readBytecodeInfo(project, searchScope, jvmClassName, virtualFile)
 }
 
 internal fun getLocationsOfInlinedLine(type: ReferenceType, position: SourcePosition, sourceSearchScope: GlobalSearchScope): List<Location> {
@@ -309,7 +310,7 @@ private fun inlinedLinesNumbers(
 
     val virtualFile = file.virtualFile ?: return listOf()
 
-    val debugInfo = readBytecodeInfo(project, jvmClassName, virtualFile) ?: return listOf()
+    val debugInfo = readBytecodeInfo(project, sourceSearchScope, jvmClassName, virtualFile) ?: return listOf()
     val smapData = debugInfo.smapData ?: return listOf()
 
     val smap = smapData.kotlinStrata ?: return listOf()

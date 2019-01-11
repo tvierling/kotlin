@@ -21,9 +21,6 @@ import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
-import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
-import org.jetbrains.kotlin.idea.caches.project.ScriptModuleInfo
-import org.jetbrains.kotlin.idea.stubindex.KotlinSourceFilterScope
 import org.jetbrains.kotlin.load.kotlin.VirtualFileFinder
 import org.jetbrains.kotlin.load.kotlin.VirtualFileFinderFactory
 
@@ -34,11 +31,9 @@ class IDEVirtualFileFinderFactory : VirtualFileFinderFactory {
         val ideaModuleInfo = (module.getCapability(ModuleInfo.Capability) as? IdeaModuleInfo)
             ?: return IDEVirtualFileFinder(GlobalSearchScope.EMPTY_SCOPE)
 
-        val scope = when (ideaModuleInfo) {
-            is ModuleSourceInfo -> KotlinSourceFilterScope.projectSourceAndClassFiles(ideaModuleInfo.contentScope(), project)
-            is ScriptModuleInfo -> ideaModuleInfo.dependencies().map { it.contentScope() }.let { GlobalSearchScope.union(it.toTypedArray()) }
-            else -> GlobalSearchScope.EMPTY_SCOPE
-        }
+        val scope = GlobalSearchScope.union(
+            ideaModuleInfo.dependencies().map { it.contentScope() }.toTypedArray()
+        )
         return IDEVirtualFileFinder(scope)
     }
 }
